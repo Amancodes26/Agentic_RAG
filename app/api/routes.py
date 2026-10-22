@@ -6,6 +6,7 @@ from app.rag.workflow import ask
 from app.rag.vectorstore import add_documents 
 from app.services.ingestion import load_file, chunk_documents, SUPPORTED
 from app.services.audit import write_audit
+from app.security.guardrails import detect_prompt_attack
 
 router = APIRouter(prefix="/api")
 settings = get_settings()
@@ -21,6 +22,11 @@ def health():
 
 @router.post("/chat")
 def chat(payload: ChatRequest):
+    # Check for prompt attacks
+    if detect_prompt_attack(payload.question):
+        raise HTTPException(status_code=400, detail="Prompt attack detected")
+    
+
     try:
         result = ask(payload.question)
         write_audit(payload.question, result["source_used"], result.get("trace", []))

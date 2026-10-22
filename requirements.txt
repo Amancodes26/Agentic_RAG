@@ -22,3 +22,4 @@ beautifulsoup4==4.15.0
 langchain-huggingface==1.2.2
 sentence-transformers==6.0.0
 langchain-pinecone==0.2.13
+groq==0.37.1
