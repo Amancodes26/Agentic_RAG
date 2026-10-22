@@ -1,4 +1,3 @@
-
 import os
 import asyncio
 
@@ -68,7 +67,7 @@ class GroqJudge(DeepEvalBaseLLM):
         if not api_key:
             raise RuntimeError("GROQ_API_KEY is not configured")
 
-        self.client = Groq(api_key=api_key, max_retries=5)
+        self.client = Groq(api_key=api_key)
         self.model_name = "openai/gpt-oss-20b"
 
     def load_model(self):
@@ -86,8 +85,7 @@ class GroqJudge(DeepEvalBaseLLM):
             "model": self.model_name,
             "messages": messages,
             "temperature": 0,
-            # Judge responses are short; a large cap reserves unnecessary TPM.
-            "max_completion_tokens": 1024,
+            "max_completion_tokens": 4096,
         }
 
         if schema is not None:
@@ -183,19 +181,6 @@ QUESTIONS = [
 ]
 
 
-def _evaluation_context(result):
-    """Return the evidence that the workflow actually used for its answer."""
-    if result.get("source_used") == "web_search":
-        web_results = result.get("web_results", "")
-        return [web_results] if web_results else []
-
-    return [
-        doc.page_content
-        for doc in result.get("kb_docs", [])
-        if getattr(doc, "page_content", "")
-    ]
-
-
 def test_agentic_rag():
     test_cases = []
 
@@ -206,7 +191,7 @@ def test_agentic_rag():
             LLMTestCase(
                 input=question,
                 actual_output=result.get("answer", ""),
-                retrieval_context=_evaluation_context(result),
+                retrieval_context=result.get("retrieved_contexts", []),
             )
         )
 
