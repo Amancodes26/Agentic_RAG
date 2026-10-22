@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ app_name }}</title>
-  <link rel="stylesheet" href="/static/css/style.css" />
+  <link rel="stylesheet" href="/static/css/style.css?v=2" />
 </head>
 <body>
   <div class="shell">
@@ -34,7 +34,10 @@
           <span class="status-dot"></span>
           <span>Enterprise Knowledge Copilot</span>
         </div>
-        <span class="pill">Agentic RAG</span>
+        <div class="topbar-actions">
+          <span class="pill">Agentic RAG</span>
+          <button id="newChat" class="secondary-btn">New chat</button>
+        </div>
       </header>
 
       <section id="chat" class="chat-area">
@@ -53,6 +56,7 @@
           <button class="example">What is our password reset policy?</button>
           <button class="example">What is the latest Microsoft Teams outage guidance?</button>
         </div>
+        <p class="muted">Recent chat context is saved in this browser tab. Use “New chat” to clear it.</p>
         <form id="chatForm" class="composer">
           <textarea id="question" rows="2" placeholder="Ask an IT support question..." required></textarea>
           <button type="submit" class="send-btn">Ask Agent</button>
@@ -82,6 +86,6 @@
     </div>
   </div>
 
-  <script src="/static/js/app.js"></script>
+  <script src="/static/js/app.js?v=2"></script>
 </body>
 </html>

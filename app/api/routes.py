@@ -1,18 +1,24 @@
 from pathlib import Path
 from fastapi import APIRouter, UploadFile, File, HTTPException, Header
 from pydantic import BaseModel, Field
+from typing import Literal
 from app.core.config import get_settings
 from app.rag.workflow import ask
 from app.rag.vectorstore import add_documents 
 from app.services.ingestion import load_file, chunk_documents, SUPPORTED
 from app.services.audit import write_audit
-from app.security.guardrails import detect_prompt_attack
 
 router = APIRouter(prefix="/api")
 settings = get_settings()
 
+class ChatMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(min_length=1, max_length=3000)
+
+
 class ChatRequest(BaseModel):
     question: str = Field(min_length=2, max_length=3000)
+    history: list[ChatMessage] = Field(default_factory=list, max_length=12)
 
 
 @router.get("/health")
@@ -22,13 +28,11 @@ def health():
 
 @router.post("/chat")
 def chat(payload: ChatRequest):
-    # Check for prompt attacks
-    if detect_prompt_attack(payload.question):
-        raise HTTPException(status_code=400, detail="Prompt attack detected")
-    
-
     try:
-        result = ask(payload.question)
+        result = ask(
+            payload.question,
+            chat_history=[message.model_dump() for message in payload.history],
+        )
         write_audit(payload.question, result["source_used"], result.get("trace", []))
 
         return {
@@ -40,8 +44,10 @@ def chat(payload: ChatRequest):
 
         }
 
+    except HTTPException:
+        raise
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise HTTPException(status_code=500, detail=f"Chat request failed: {exc}") from exc
 
 
 
