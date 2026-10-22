@@ -21,3 +21,5 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,.chat-area::-webkit-scrollbar,.t
 .examples{gap:7px;margin-bottom:6px}
 .example{padding:7px 10px}
 .composer-wrap>.muted{margin:6px 0 10px}
+.bubble pre{max-width:100%;overflow:auto;padding:14px 16px;border:1px solid #293444;border-radius:10px;background:#0d131b;white-space:pre}
+.bubble pre code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.88em}

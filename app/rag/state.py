@@ -4,7 +4,12 @@ from pydantic import BaseModel, Field
 from langchain_core.documents import Document
 
 class RouteDecision(BaseModel):
-    route: Literal["kb", "direct"] = Field(description="kb for IT/support questions; direct for greetings/simple chat")
+    route: Literal["kb", "direct", "out_of_scope"] = Field(
+        description=(
+            "kb for IT support/company document questions; direct only for greetings, "
+            "thanks, and brief personal conversation; out_of_scope for unrelated requests"
+        )
+    )
     web_search_allowed: bool = Field(
         default=False,
         description="True only for public/current information; false for private company or personal documents",

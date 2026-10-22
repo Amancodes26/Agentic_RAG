@@ -76,6 +76,21 @@ function formatMarkdown(text='') {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const trimmed = line.trim();
+    const codeFence = trimmed.match(/^```\s*([\w+-]*)\s*$/);
+    if (codeFence) {
+      flushParagraph();
+      flushList();
+      const codeLines = [];
+      i++;
+      while (i < lines.length && !/^\s*```\s*$/.test(lines[i])) {
+        codeLines.push(lines[i]);
+        i++;
+      }
+      const languageClass = codeFence[1] ? ` class="language-${escapeHtml(codeFence[1])}"` : '';
+      blocks.push(`<pre><code${languageClass}>${escapeHtml(codeLines.join('\n'))}</code></pre>`);
+      continue;
+    }
+
     if (trimmed.includes('|') && i + 1 < lines.length && isTableSeparator(lines[i + 1])) {
       flushParagraph();
       flushList();
