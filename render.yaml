@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: it-support-rag
+    runtime: python-3.12
+    buildCommand: pip install -r requirements.txt
+    startCommand: python run.py
+      - key: GROQ_API_KEY
+        sync: false
+      - key: TAVILY_API_KEY
+        sync: false
+      - key: PINECONE_API_KEY
+        sync: false
+      - key: ADMIN_API_KEY
+        sync: false
+    plan: free
