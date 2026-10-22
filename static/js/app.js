@@ -19,6 +19,11 @@ function loadHistory() {
 
 let conversation = loadHistory();
 
+function resizeQuestion() {
+  question.style.height = 'auto';
+  question.style.height = `${Math.min(question.scrollHeight, 160)}px`;
+}
+
 function escapeHtml(s='') {
   return s.replace(/[&<>']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;'}[c])).replace(/\"/g, '&quot;');
 }
@@ -147,6 +152,7 @@ function renderTrace(items=[]) {
 async function askAgent(q) {
   addMessage('user', q);
   question.value = '';
+    resizeQuestion();
   renderTrace(['Running LangGraph workflow...']);
   sourceUsed.textContent = 'Running';
   const btn = form.querySelector('button');
@@ -178,6 +184,15 @@ async function askAgent(q) {
 
 renderSavedConversation();
 form.addEventListener('submit', e => { e.preventDefault(); const q = question.value.trim(); if (q) askAgent(q); });
+question.addEventListener('input', resizeQuestion);
+question.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+    e.preventDefault();
+    const submitButton = form.querySelector('button[type="submit"]');
+    if (question.value.trim() && !submitButton?.disabled) form.requestSubmit();
+  }
+});
+resizeQuestion();
 document.querySelectorAll('.example').forEach(b => b.addEventListener('click', () => askAgent(b.textContent.trim())));
 document.getElementById('newChat').addEventListener('click', () => {
   conversation = [];
