@@ -2,7 +2,6 @@
 import time
 
 from pinecone import Pinecone, ServerlessSpec
-from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_pinecone import PineconeVectorStore
 
 from app.core.config import get_settings
@@ -33,6 +32,11 @@ def get_embeddings():
     global _embeddings
 
     if _embeddings is None:
+        # Keep the web app's startup path lightweight. Loading this integration
+        # imports PyTorch/Transformers, which is only needed for KB retrieval
+        # and ingestion and can delay or exhaust memory during deployment boot.
+        from langchain_huggingface import HuggingFaceEmbeddings
+
         _embeddings = HuggingFaceEmbeddings(
             model_name=settings.embedding_model,
             model_kwargs={"device": "cpu"},
