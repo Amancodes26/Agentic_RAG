@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ app_name }}</title>
-  <link rel="stylesheet" href="/static/css/style.css?v=4" />
+  <link rel="stylesheet" href="/static/css/style.css?v=5" />
 </head>
 <body>
   <div class="shell">
@@ -12,7 +12,7 @@
       <div>
         <div class="brand-badge">FDE Project</div>
         <h1>IT Support<br/>Agentic RAG</h1>
-        <p class="muted">Private company knowledge first. External web only when evidence is weak.</p>
+        <p class="muted">Personal documents stay associated with your workspace.</p>
       </div>
 
       <div class="workflow-card">
@@ -25,7 +25,7 @@
         <div class="flow-step">6. Grounded answer</div>
       </div>
 
-      <button id="openUpload" class="secondary-btn">+ Add Company Document</button>
+      <button id="openUpload" class="secondary-btn">+ Add Personal Document</button>
     </aside>
 
     <main class="main">
@@ -36,6 +36,7 @@
         </div>
         <div class="topbar-actions">
           <span class="pill">Agentic RAG</span>
+          <button id="changeWorkspace" class="secondary-btn">Workspace</button>
           <button id="newChat" class="secondary-btn">New chat</button>
         </div>
       </header>
@@ -56,6 +57,7 @@
           <button class="example">What is our password reset policy?</button>
         </div>
         <p class="muted">Recent chat context is saved in this browser tab. Use “New chat” to clear it.</p>
+        <label class="common-search"><input id="searchCommon" type="checkbox" checked /> Include shared knowledge in this search</label>
         <form id="chatForm" class="composer">
           <textarea id="question" rows="2" placeholder="Ask an IT support question..." required></textarea>
           <button type="submit" class="send-btn">Ask Agent</button>
@@ -74,18 +76,29 @@
     </aside>
   </div>
 
+  <div id="workspaceModal" class="modal hidden">
+    <div class="modal-card workspace-modal-card">
+      <div class="modal-head"><h2>Open your workspace</h2></div>
+      <p class="muted">Enter your name to open your personal documents and chat workspace.</p>
+      <input id="workspaceName" maxlength="40" placeholder="Your name" autocomplete="name" />
+      <button id="workspaceBtn" class="send-btn full">Continue</button>
+      <div id="workspaceStatus" class="upload-status" aria-live="polite"></div>
+    </div>
+  </div>
+
   <div id="uploadModal" class="modal hidden">
     <div class="modal-card">
-      <div class="modal-head"><h2>Ingest Company Document</h2><button id="closeUpload">×</button></div>
-      <p class="muted">Upload PDF, TXT, Markdown, or DOCX. The document is chunked, embedded, and indexed into Pinecone.</p>
-      <input id="adminKey" type="password" placeholder="Admin API key" />
+      <div class="modal-head"><h2>Add a document</h2><button id="closeUpload">×</button></div>
+      <p class="muted">Documents are private to the selected workspace by default.</p>
+      <select id="uploadScope"><option value="personal">My personal knowledge</option><option value="common">Shared knowledge (admin)</option></select>
+      <input id="adminKey" type="password" placeholder="Admin key (shared uploads only)" />
       <input id="fileInput" type="file" accept=".pdf,.txt,.md,.docx" />
       <button id="uploadBtn" class="send-btn full">Index Document</button>
       <div id="uploadStatus" class="upload-status"></div>
     </div>
   </div>
 
-  <script src="/static/js/app.js?v=3"></script>
+  <script src="/static/js/app.js?v=6"></script>
 </body>
 </html>
 

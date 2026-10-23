@@ -6,7 +6,7 @@ from langchain_tavily import TavilySearch
 from langgraph.graph import StateGraph, START, END
 from app.core.config import get_settings
 from app.rag.state import AgentState, RouteDecision, EvidenceGrade
-from app.rag.vectorstore import get_retriever
+from app.rag.vectorstore import similarity_search_with_score
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -23,6 +23,7 @@ def llm():
             model=settings.groq_model,
             temperature=0,
             api_key=settings.groq_api_key,
+            streaming=True,
         )
     return _llm
 
@@ -139,8 +140,12 @@ def _name_shared_in_history(history: list[dict]) -> str | None:
     return None
 
 def retrieve_kb(state: AgentState):
-    docs = get_retriever().invoke(state["current_query"])
-    trace = add_trace(state, f"Private KB retrieval → {len(docs)} chunks")
+    personal_hits = similarity_search_with_score(state["current_query"], f"user-{state['user_id']}")
+    shared_hits = similarity_search_with_score(state["current_query"], settings.common_kb_namespace or settings.pinecone_namespace) if state.get("search_common") else []
+    # Pinecone cosine similarity scores are higher for closer matches.
+    hits = sorted([*personal_hits, *shared_hits], key=lambda hit: hit[1], reverse=True)[:settings.top_k]
+    docs = [doc for doc, _score in hits]
+    trace = add_trace(state, f"Workspace retrieval → {len(personal_hits)} personal chunks; shared retrieval → {len(shared_hits)} chunks")
     if settings.app_env.lower() == "development":
         for index, doc in enumerate(docs, start=1):
             source = doc.metadata.get("source", "unknown")
@@ -150,13 +155,13 @@ def retrieve_kb(state: AgentState):
 
 def grade_kb(state: AgentState):
     grader = llm().with_structured_output(EvidenceGrade, method="json_mode")
-    context = "\n\n".join(f"Source: {d.metadata.get('source','unknown')}\n{d.page_content}" for d in state["kb_docs"])
+    context = "\n\n".join(f"Source: {d.metadata.get('filename') or d.metadata.get('source','unknown')} ({d.metadata.get('scope', 'shared')})\n{d.page_content}" for d in state["kb_docs"])
     grade = grader.invoke(f"""
 You grade evidence for an enterprise IT support assistant.
 Prior conversation (use only to understand references in the current question):
 {conversation_context(state)}
 Question: {state['question']}
-Private company KB evidence:\n{context}
+Workspace document evidence (and shared knowledge if selected):\n{context}
 Return good when the evidence contains directly relevant facts that can support an answer to the
 question, even if the retrieved chunks do not include every step or detail. For example, a handbook
 section titled "API Keys and Secrets" that says never to enter API keys in LLM prompts is good
@@ -224,19 +229,19 @@ Question: {state['question']}
     }
 
 def generate_from_kb(state: AgentState):
-    context = "\n\n".join(f"[Source: {d.metadata.get('source','unknown')}]\n{d.page_content}" for d in state["kb_docs"])
+    context = "\n\n".join(f"[Source: {d.metadata.get('filename') or d.metadata.get('source','unknown')} | {d.metadata.get('scope', 'shared')}]\n{d.page_content}" for d in state["kb_docs"])
     answer = llm().invoke(f"""
-You are an enterprise IT support copilot. Answer ONLY from the private company KB below.
+You are an enterprise IT support copilot. Answer ONLY from the retrieved workspace or shared knowledge below.
 Be concise, actionable, and safe. If steps are present, present them clearly.
-Do not invent policy details. Mention that the answer is based on the company's private knowledge base.
+Do not invent details. Identify whether evidence came from a personal workspace document or shared knowledge when possible.
 Use prior conversation to understand follow-ups, but treat it as context rather than a source of company policy.
 Prior conversation:\n{conversation_context(state)}
-Question: {state['question']}\n\nPrivate KB:\n{context}
+Question: {state['question']}\n\nRetrieved knowledge:\n{context}
 """).content
     citations = []
     seen = set()
     for d in state["kb_docs"]:
-        src = d.metadata.get("source", "Private KB")
+        src = d.metadata.get("filename") or d.metadata.get("source", "Knowledge base")
         if src not in seen:
             seen.add(src)
             citations.append({"title": src.split("/")[-1], "url": "", "type": "private_kb"})
@@ -346,9 +351,11 @@ def build_graph():
 
 agent_graph = build_graph()
 
-def ask(question: str, chat_history: list[dict[str, str]] | None = None):
-    initial: AgentState = {
+def _initial_state(question: str, chat_history: list[dict[str, str]] | None, user_id: str, search_common: bool) -> AgentState:
+    return {
         "question": question,
+        "user_id": user_id,
+        "search_common": search_common,
         "current_query": question,
         "chat_history": (chat_history or [])[-12:],
         "web_search_allowed": False,
@@ -362,4 +369,36 @@ def ask(question: str, chat_history: list[dict[str, str]] | None = None):
         "trace": [],
         "citations": [],
     }
-    return agent_graph.invoke(initial)
+
+
+def ask(question: str, chat_history: list[dict[str, str]] | None = None, user_id: str = "demo", search_common: bool = False):
+    return agent_graph.invoke(_initial_state(question, chat_history, user_id, search_common))
+
+
+def stream_ask(question: str, chat_history: list[dict[str, str]] | None = None, user_id: str = "demo", search_common: bool = False):
+    """Yield final answer tokens, followed by the completed graph state."""
+    final_state = {}
+    streamed_answer = False
+    for mode, chunk in agent_graph.stream(
+        _initial_state(question, chat_history, user_id, search_common),
+        stream_mode=["messages", "values"],
+    ):
+        if mode == "messages":
+            message, metadata = chunk
+            if metadata.get("langgraph_node") not in {"generate_from_kb", "generate_from_web"}:
+                continue
+            content = message.content
+            if isinstance(content, str) and content:
+                streamed_answer = True
+                yield {"type": "token", "content": content}
+            elif isinstance(content, list):
+                for block in content:
+                    if isinstance(block, dict) and isinstance(block.get("text"), str):
+                        streamed_answer = True
+                        yield {"type": "token", "content": block["text"]}
+        elif mode == "values":
+            final_state = chunk
+
+    if not streamed_answer and final_state.get("answer"):
+        yield {"type": "token", "content": final_state["answer"]}
+    yield {"type": "done", "result": final_state}

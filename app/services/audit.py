@@ -16,8 +16,20 @@ def init_db() -> None:
             trace_json TEXT NOT NULL
         )"""
     )
+    con.execute("CREATE TABLE IF NOT EXISTS demo_users (username_key TEXT PRIMARY KEY, display_name TEXT NOT NULL, created_at TEXT NOT NULL)")
     con.commit()
     con.close()
+
+
+def register_demo_user(username: str) -> bool:
+    """Register a demo workspace name. Returns True when it already existed."""
+    key = username.strip().casefold()
+    con = sqlite3.connect(settings.audit_db_path)
+    existed = con.execute("SELECT 1 FROM demo_users WHERE username_key = ?", (key,)).fetchone() is not None
+    con.execute("INSERT OR IGNORE INTO demo_users(username_key, display_name, created_at) VALUES (?, ?, ?)", (key, username.strip(), datetime.now(timezone.utc).isoformat()))
+    con.commit()
+    con.close()
+    return existed
 
 def write_audit(question: str, source_used: str, trace: list[str]) -> None:
     con = sqlite3.connect(settings.audit_db_path)

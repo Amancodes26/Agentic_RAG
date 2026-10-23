@@ -84,24 +84,23 @@ def ensure_index():
     return pc.Index(settings.pinecone_index_name)
 
 
-def get_vectorstore():
+def get_vectorstore(namespace: str | None = None):
     global _vectorstore
-
-    if _vectorstore is None:
-        _vectorstore = PineconeVectorStore(
-            index=ensure_index(),
-            embedding=get_embeddings(),
-            namespace=settings.pinecone_namespace,
-        )
-
-    return _vectorstore
+    namespace = namespace or settings.common_kb_namespace or settings.pinecone_namespace
+    if namespace == settings.pinecone_namespace:
+        if _vectorstore is None:
+            _vectorstore = PineconeVectorStore(index=ensure_index(), embedding=get_embeddings(), namespace=namespace)
+        return _vectorstore
+    return PineconeVectorStore(index=ensure_index(), embedding=get_embeddings(), namespace=namespace)
 
 
-def get_retriever():
-    return get_vectorstore().as_retriever(
-        search_kwargs={"k": settings.top_k}
-    )
+def get_retriever(namespace: str | None = None):
+    return get_vectorstore(namespace).as_retriever(search_kwargs={"k": settings.top_k})
 
 
-def add_documents(chunks):
-    return get_vectorstore().add_documents(chunks)
+def similarity_search_with_score(query: str, namespace: str, k: int | None = None):
+    return get_vectorstore(namespace).similarity_search_with_score(query, k=k or settings.top_k)
+
+
+def add_documents(chunks, namespace: str | None = None):
+    return get_vectorstore(namespace).add_documents(chunks)

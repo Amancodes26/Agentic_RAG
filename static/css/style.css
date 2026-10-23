@@ -23,3 +23,4 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,.chat-area::-webkit-scrollbar,.t
 .composer-wrap>.muted{margin:6px 0 10px}
 .bubble pre{max-width:100%;overflow:auto;padding:14px 16px;border:1px solid #293444;border-radius:10px;background:#0d131b;white-space:pre}
 .bubble pre code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.88em}
+.modal{z-index:20}.modal-card input,.modal-card select{width:100%;padding:12px 13px;background:#0b1119;color:#edf2f7}.modal-card input:focus,.modal-card select:focus{outline:2px solid #42bd86;outline-offset:1px}.modal-card .send-btn:disabled,.composer .send-btn:disabled{opacity:.65;cursor:wait}.workspace-modal-card{max-width:430px}.topbar-actions{display:flex;align-items:center;gap:10px}

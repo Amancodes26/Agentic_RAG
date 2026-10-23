@@ -20,6 +20,8 @@ class EvidenceGrade(BaseModel):
 
 class AgentState(TypedDict):
     question: str
+    user_id: str
+    search_common: bool
     current_query: str
     chat_history: List[dict]
     web_search_allowed: bool
