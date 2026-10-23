@@ -1,0 +1,18 @@
+build:
+  system: auto
+  command: "pip install -r requirements.txt"
+
+start_command: "python run.py"
+
+scaling:
+  min_replicas: 1
+  max_replicas: 1
+  min_cpu: 0.01
+  max_cpu: 0.1
+  min_memory: 128
+  max_memory: 256
+
+health_check:
+  type: http
+  http_path: "/api/health"
+  interval_in_seconds: 30

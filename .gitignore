@@ -221,3 +221,11 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Local runtime data and deployment artifacts
+data/audit.db
+data/audit.db-*
+uploads/*
+!uploads/.gitkeep
+.deepeval/
+.kilo/
